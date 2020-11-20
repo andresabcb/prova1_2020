@@ -110,6 +110,128 @@ def detect(frame):
     # show the output image
     return image, results
 
+def text_cv(bgr, pos, text, fontscale=1, thickness=1):
+    # Tirado do gabarito da P1 de 2020.1
+    font = cv2.FONT_HERSHEY_SIMPLEX    
+    color=(255,255,255)    
+    mensagem = "{}".format(text)
+    cv2.putText(bgr, mensagem, pos, font, fontscale, color, thickness, cv2.LINE_AA) 
+    
+def check_magenta_0(frame, p1, p2):
+    inicio = p1
+    fim = p2
+
+    x = 0
+    y =  1
+
+    #parte = frame
+
+    parte = frame[inicio[y]:fim[y], inicio[x]:fim[x]]
+
+    if parte.shape[0]>1 and parte.shape[1] > 1: 
+
+        hsv = cv2.cvtColor(parte, cv2.COLOR_BGR2HSV)
+        mini = np.array([135, 25,25])#, dtype=np.uint8)
+        maxi = np.array([175, 255,255])#, dtype=np.uint8)
+        mask = cv2.inRange(hsv, mini , maxi)
+
+        cv2.imshow('Mascara', mask)
+
+        cont = 0
+
+        for i in range(mask.shape[0]):
+            for j in range(mask.shape[1]):
+                if mask[i][j] == 255:
+                    cont=cont+1
+
+        text_cv(parte, (1,45), '{}'.format(cont))
+        cv2.imshow("Slice", parte)
+
+        if cont > 1000: 
+            return True
+
+
+
+    return False
+
+
+def check_magenta(frame, p1, p2):
+    inicio = p1
+    fim = p2
+
+    x = 0
+    y =  1
+
+    #parte = frame
+
+    parte = frame[inicio[y]:fim[y], inicio[x]:fim[x]]
+
+    if parte.shape[0]>1 and parte.shape[1] > 1: 
+
+        hsv = cv2.cvtColor(parte, cv2.COLOR_BGR2HSV)
+        mini = np.array([135, 25,25])#, dtype=np.uint8)
+        maxi = np.array([175, 255,255])#, dtype=np.uint8)
+        mask = cv2.inRange(hsv, mini , maxi)
+
+        cv2.imshow('Mascara', mask)
+
+        cont = np.sum(mask)/255
+
+        text_cv(parte, (1,45), '{}'.format(cont))
+        cv2.imshow("Slice", parte)
+
+        if cont > 1000: 
+            return True
+
+
+
+    return False
+
+def faz_analise(frame, resultados): 
+
+    magenta_dog = False
+    p1_dog = (400,400)
+    p2_dog = (401, 401)
+
+    chair = False
+    p1_chair = -1
+    p2_chair = -1
+
+    for r in resultados:
+        if r[0]=="dog" or r[0]=='person':
+            magenta = check_magenta(frame, r[2], r[3])
+
+            if magenta:
+                magenta_dog = True
+                p1_dog = r[2]
+                p2_dog = r[3]
+
+        if r[0]=='chair': 
+            chair = True
+            p1_chair = r[2]
+            p2_chair = r[3]
+    x = 0
+    y = 1
+
+    acima = False 
+    entre = False
+
+
+    if magenta_dog: 
+        xdog = int((p1_dog[x] + p2_dog[x])/2)
+
+        if chair:
+            if p2_dog[y] < p1_chair[y]:
+                acima = True
+
+            if p1_chair[x] <= xdog <= p2_chair[x]:
+                entre = True
+
+            if acima and entre: 
+                text_cv(frame, (50, 400), 'Cao magenta acima da cadeira', 2, 2)
+    return frame
+
+
 if __name__ == "__main__":
 
 
@@ -151,8 +273,15 @@ if __name__ == "__main__":
 
         saida, resultados = detect(frame)
 
+        print(type(resultados))
+        print(resultados)
+
+
+
+        saida_analise = faz_analise(frame, resultados)
+
         # NOTE que em testes a OpenCV 4.0 requereu frames em BGR para o cv2.imshow
-        cv2.imshow('imagem', saida)
+        cv2.imshow('Resultado', saida_analise)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
