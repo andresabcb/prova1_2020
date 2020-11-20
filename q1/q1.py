@@ -3,6 +3,10 @@
 
 # Este NÃO é um programa ROS
 
+
+# Este codigo pode ser visto rodando em: https://youtu.be/USeRmzNlNxE
+
+
 from __future__ import print_function, division 
 
 import cv2
